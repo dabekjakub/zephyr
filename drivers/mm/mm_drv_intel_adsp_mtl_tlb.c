@@ -67,6 +67,12 @@ DEVICE_MMIO_TOPLEVEL_STATIC(tlb_regs, DT_DRV_INST(0));
 #define L2_SRAM_BANK_NUM			(L2_SRAM_SIZE / SRAM_BANK_SIZE)
 #define IS_BIT_SET(value, idx)		((value) & (1 << (idx)))
 
+enum mem_zone {
+	MEM_REGION_SYS_HEAP = 0,
+	MEM_REGION_UNAVALIBLE_FOR_APPLICATION
+};
+
+extern char _end[];
 static struct k_spinlock tlb_lock;
 extern struct k_spinlock sys_mm_drv_common_lock;
 
@@ -635,6 +641,28 @@ int sys_mm_drv_move_array(void *virt_old, size_t size, void *virt_new,
 	z_xtensa_cache_flush(va_new, size);
 
 	return ret;
+}
+
+const struct sys_mm_drv_region *sys_mm_drv_simple_query_memory_regions(void)
+{
+    int avalible_memory_size = mtl_hpsram_get_bank_count() * SRAM_BANK_SIZE;
+    int unused_memory_size = avalible_memory_size - (&_end; - L2_SRAM_BASE);
+	int region_unavalible_to_application_size = ROUND_UP(0.1 * unused_memory_size), CONFIG_MM_DRV_PAGE_SIZE);
+	int application_memory_size = unused_memory_size - region_unavalible_to_application_size;
+
+	const static struct sys_mm_drv_region adsp_meteorlake_memory_regions[] = {
+		{
+			.addr = &_end,
+			.size = application_memory_size,
+			.attr = MEM_REGION_SYS_HEAP},
+		{
+			.addr = (uint32_t)&_end + application_memory_size,
+			.size = region_unavalible_to_application_size,
+			.attr = MEM_REGION_UNAVALIBLE_FOR_APPLICATION},
+		NULL
+	};
+
+	return adsp_meteorlake_memory_regions;
 }
 
 static int sys_mm_drv_mm_init(const struct device *dev)
