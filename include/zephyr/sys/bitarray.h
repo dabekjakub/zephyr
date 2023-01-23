@@ -155,6 +155,27 @@ int sys_bitarray_alloc(sys_bitarray_t *bitarray, size_t num_bits,
 		       size_t *offset);
 
 /**
+ * Find avalible bits in a bit array
+ *
+ * This finds a number of bits (@p num_bits) in a contiguous of
+ * previously unallocated region. If such a region exists
+ * offset to the start of this region is returned via @p offset.
+ * If allocate is set the bits are marked as allocated.
+ *
+ * @param[in]  bitarray Bitarray struct
+ * @param[in]  num_bits Number of bits to allocate
+ * @param[in]  allocate Should bits be allocated
+ * @param[out] offset   Offset to the start of allocated region if
+ *                      successful
+ *
+ * @retval 0       Found free contingous number of bits.
+ * @retval -EINVAL Invalid argument (e.g. search for more bits than
+ *                 the bitarray has, trying to search for 0 bits, etc.)
+ * @retval -ENOSPC No contiguous region big enough.
+ */
+int sys_bitarray_find_free(sys_bitarray_t *bitarray, size_t num_bits,
+	bool allocate, size_t *offset);
+/**
  * Free bits in a bit array
  *
  * This marks the number of bits (@p num_bits) starting from @p offset

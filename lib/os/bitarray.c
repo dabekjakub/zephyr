@@ -382,7 +382,13 @@ out:
 }
 
 int sys_bitarray_alloc(sys_bitarray_t *bitarray, size_t num_bits,
-		       size_t *offset)
+	size_t *offset)
+{
+	return sys_bitarray_find_free(bitarray, num_bits, true, offset);
+}
+
+int sys_bitarray_find_free(sys_bitarray_t *bitarray, size_t num_bits,
+	bool allocate, size_t *offset)
 {
 	k_spinlock_key_t key;
 	uint32_t bit_idx;
@@ -435,8 +441,9 @@ int sys_bitarray_alloc(sys_bitarray_t *bitarray, size_t num_bits,
 	while (bit_idx <= off_end) {
 		if (match_region(bitarray, bit_idx, num_bits, false,
 				 &bd, &mismatch)) {
-			set_region(bitarray, bit_idx, num_bits, true, &bd);
-
+			if (allocate) {
+				set_region(bitarray, bit_idx, num_bits, true, &bd);
+			}
 			*offset = bit_idx;
 			ret = 0;
 			break;
