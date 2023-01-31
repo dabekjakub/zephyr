@@ -25,7 +25,7 @@ extern "C" {
 #include <zephyr/sys/bitarray.h>
 #include <zephyr/sys/mem_stats.h>
 
-#define MAX_MULTI_ALLOCATORS 8
+#define MAX_MULTI_ALLOCATORS 16
 
 /**
  * @defgroup mem_blocks_apis Memory Blocks APIs
@@ -350,6 +350,18 @@ void sys_multi_mem_blocks_add_allocator(sys_multi_mem_blocks_t *group,
 					sys_mem_blocks_t *alloc);
 
 /**
+ * @brief Remove an allocator from an allocator group
+ *
+ * This removes a known allocator from an existing multi memory blocks
+ * allocator group.
+ *
+ * @param group Multi memory blocks allocator structure.
+ * @param alloc Allocator to remove
+ */
+void sys_multi_mem_blocks_remove_allocator(sys_multi_mem_blocks_t *group,
+					sys_mem_blocks_t *alloc);
+
+/**
  * @brief Allocate memory from multi memory blocks allocator group
  *
  * Just as for sys_mem_blocks_alloc(), allocates multiple blocks of
@@ -373,6 +385,32 @@ void sys_multi_mem_blocks_add_allocator(sys_multi_mem_blocks_t *group,
 int sys_multi_mem_blocks_alloc(sys_multi_mem_blocks_t *group,
 			       void *cfg, size_t count,
 			       void **out_blocks,
+			       size_t *blk_size);
+
+
+/**
+ * @brief Allocate memory from multi memory blocks allocator group
+ *
+ * Just as for sys_mem_blocks_alloc_contiguous(), Allocate a contiguous
+ * set of memory blocks Takes an opaque configuration pointer passed
+ * to the choice function, which is used by integration code
+ * to choose an allocator.
+ *
+ * @param[in]  group      Multi memory blocks allocator structure.
+ * @param[in]  cfg        Opaque configuration parameter,
+ *                        as for sys_multi_mem_blocks_choice_fn_t
+ * @param[in]  count      Number of blocks to allocate
+ * @param[out] out_block  Output pointer to the start of the allocated block set
+ * @param[out] blk_size   If not NULL, output the block size of
+ *                        the chosen allocator.
+ *
+ * @retval 0       Successful
+ * @retval -EINVAL Invalid argument supplied, or no allocator chosen.
+ * @retval -ENOMEM Not enough blocks for allocation.
+ */
+int sys_multi_mem_blocks_alloc_contiguous(sys_multi_mem_blocks_t *group,
+			       void *cfg, size_t count,
+			       void **out_block,
 			       size_t *blk_size);
 
 /**

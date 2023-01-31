@@ -328,7 +328,27 @@ void sys_multi_mem_blocks_add_allocator(sys_multi_mem_blocks_t *group,
 {
 	__ASSERT_NO_MSG(group->num_allocators < ARRAY_SIZE(group->allocators));
 
-	group->allocators[group->num_allocators++] = alloc;
+	for (size_t i = 0; i < group->num_allocators; i++)
+	{
+		if (group->allocators[i] == NULL)
+		{
+			group->allocators[i] = alloc;
+			group->num_allocators++;
+		}
+	}
+}
+
+void sys_multi_mem_blocks_remove_allocator(sys_multi_mem_blocks_t *group,
+					sys_mem_blocks_t *alloc)
+{
+	for (size_t i = 0; i < group->num_allocators; i++)
+	{
+		if (group->allocators[i] == alloc)
+		{
+			group->allocators[i] = NULL;
+			group->num_allocators--;
+		}
+	}
 }
 
 int sys_multi_mem_blocks_alloc(sys_multi_mem_blocks_t *group,
@@ -361,6 +381,45 @@ int sys_multi_mem_blocks_alloc(sys_multi_mem_blocks_t *group,
 	}
 
 	ret = sys_mem_blocks_alloc(allocator, count, out_blocks);
+
+	if ((ret == 0) && (blk_size != NULL)) {
+		*blk_size = BIT(allocator->blk_sz_shift);
+	}
+
+out:
+	return ret;
+}
+
+int sys_multi_mem_blocks_alloc_contiguous(sys_multi_mem_blocks_t *group,
+			       void *cfg, size_t count,
+			       void **out_block,
+			       size_t *blk_size)
+{
+	sys_mem_blocks_t *allocator;
+	int ret = 0;
+
+	__ASSERT_NO_MSG(group != NULL);
+	__ASSERT_NO_MSG(out_blocks != NULL);
+
+	if (count == 0) {
+		if (blk_size != NULL) {
+			*blk_size = 0;
+		}
+		goto out;
+	}
+
+	allocator = group->choice_fn(group, cfg);
+	if (allocator == NULL) {
+		ret = -EINVAL;
+		goto out;
+	}
+
+	if (count > allocator->num_blocks) {
+		ret = -ENOMEM;
+		goto out;
+	}
+
+	ret = sys_mem_blocks_alloc_contiguous(allocator, count, out_block);
 
 	if ((ret == 0) && (blk_size != NULL)) {
 		*blk_size = BIT(allocator->blk_sz_shift);
